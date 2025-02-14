@@ -10,12 +10,15 @@ from fastapi.responses import (  # Added Response import for file content
 from pydantic import BaseModel  # Import for BatchRequest model
 
 from src.api.dependencies.auth import verify_token  # Fix import path
+from src.api.v1.decorators import handle_file_errors
 from src.api.v1.models.responses import (
     ErrorResponse,
     FileMetadataResponse,
     PaginatedDirectoryResponse,
 )
 from src.core.exceptions import FileNotFoundError
+from src.core.interfaces.storage import StorageBackend
+from src.infrastructure.storage.factory import get_storage
 from src.infrastructure.storage.filesystem import FilesystemStorage
 from src.services.file_service import FileService
 
@@ -29,45 +32,28 @@ class BatchRequest(BaseModel):
 
 
 @router.get("", response_model=FileMetadataResponse)
+@handle_file_errors
 async def get_file_metadata(
     path: str,
-    base_path: str = Query(..., description="Base path for file operations"),
+    storage: StorageBackend = Depends(get_storage),
     token_data=Depends(verify_token),
 ):
     """Get metadata for a file"""
-    try:
-        storage = FilesystemStorage(Path(base_path))
-        file_service = FileService(storage)
-        return file_service.get_metadata(path)
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail={"error": {"message": str(e)}})
-    except PermissionError:
-        raise HTTPException(
-            status_code=403, detail={"error": {"message": "Permission denied"}}
-        )
+    file_service = FileService(storage)
+    return file_service.get_metadata(path)
 
 
 @router.get("/content")
+@handle_file_errors
 async def get_file_content(
     path: str,
-    base_path: str = Query(..., description="Base path for file operations"),
+    storage: StorageBackend = Depends(get_storage),
     token_data=Depends(verify_token),
 ):
     """Get content of a text file"""
-    try:
-        storage = FilesystemStorage(Path(base_path))
-        file_service = FileService(storage)
-        content = file_service.storage.read_content(path)
-        return JSONResponse(content={"content": content})
-    except FileNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail={"error": {"message": str(e)}}
-        )
-    except UnicodeDecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": {"message": "File is not a valid text file"}},
-        )
+    file_service = FileService(storage)
+    content = file_service.read_content(path)
+    return JSONResponse(content={"content": content})
 
 
 @router.get("/list", response_model=PaginatedDirectoryResponse)
