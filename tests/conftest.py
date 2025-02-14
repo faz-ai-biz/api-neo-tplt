@@ -1,6 +1,3 @@
-from datetime import datetime, timedelta
-
-import jwt
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -9,7 +6,8 @@ from sqlalchemy.orm import sessionmaker
 from src.core.config import settings
 from src.db.models import Base
 from src.db.session import get_db
-from src.main import app, create_app
+from src.main import app
+from tests.utils import create_test_token
 
 
 @pytest.fixture
@@ -95,22 +93,6 @@ def cleanup_test_data():
         pass  # Module not implemented yet
 
 
-def create_test_token(scopes: list[str]) -> str:
-    """Create a JWT token with specified scopes for testing"""
-    payload = {
-        "sub": "test_user",
-        "exp": datetime.utcnow() + timedelta(hours=1),
-        "iat": datetime.utcnow(),
-        "aud": settings.AUTH_TOKEN_AUDIENCE,
-        "iss": settings.AUTH_TOKEN_ISSUER,
-        "scope": scopes,
-    }
-
-    return jwt.encode(
-        payload, settings.AUTH_SECRET_KEY, algorithm=settings.AUTH_ALGORITHM
-    )
-
-
 @pytest.fixture
 def valid_token() -> str:
     """Create a valid token with default test scopes"""
@@ -121,9 +103,3 @@ def valid_token() -> str:
 def auth_headers(valid_token) -> dict:
     """Create headers with valid authentication token"""
     return {"Authorization": f"Bearer {valid_token}"}
-
-
-@pytest.fixture
-def client() -> TestClient:
-    """Create a test client with the app"""
-    return TestClient(app)

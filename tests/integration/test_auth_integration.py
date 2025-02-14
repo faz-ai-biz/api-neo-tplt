@@ -1,3 +1,5 @@
+import uuid
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -5,52 +7,30 @@ import pytest
 from tests.conftest import create_test_token
 
 
-def test_token_with_correct_scope(client, tmp_path):
+def test_insufficient_scope(client, tmp_path):
     """
-    Test ID: AUTH-002
+    Test ID: AUTH-007
     Category: Authentication
-    Description: Token with correct scope
-    Expected Result: 200 OK
+    Description: Token with insufficient scope
+    Expected Result: 403 Forbidden, AUTH004 code
     Type: Integration
     """
     # Create a test file
     test_file = tmp_path / "test.txt"
     test_file.write_text("Test content")
 
-    # Create token with files:read scope
-    token = create_test_token(scopes=["files:read"])
+    # Create token with insufficient scope
+    token = create_test_token(scopes=["profile:read"])  # Wrong scope
     headers = {"Authorization": f"Bearer {token}"}
 
-    # Request file metadata with correctly scoped token
+    # Request file metadata with insufficient scope
     response = client.get(
-        "/api/v1/files",
-        params={"path": str(test_file)},  # Use the actual test file path
-        headers=headers,
+        "/api/v1/files", params={"path": str(test_file)}, headers=headers
     )
 
-    # Verify successful access
-    assert response.status_code == 200
-    data = response.json()
-    assert "metadata" in data
-    assert data["metadata"]["name"] == test_file.name
-    assert data["metadata"]["size"] == len("Test content")
-
-
-def test_missing_authorization_header(client):
-    """
-    Test ID: AUTH-005
-    Category: Edge Case
-    Description: Missing Authorization header
-    Expected Result: 401 Unauthorized
-    Type: Integration
-    """
-    # Make request without Authorization header
-    response = client.get("/api/v1/files", params={"path": "test.txt"})
-
-    assert response.status_code == 401
+    # Verify forbidden access
+    assert response.status_code == 403
     error_response = response.json()
     assert "error" in error_response
-    assert error_response["error"]["code"] == "AUTH001"
-    assert "timestamp" in error_response["error"]
-    assert "requestId" in error_response["error"]
-    assert "message" in error_response["error"]
+    assert error_response["error"]["code"] == "AUTH004"
+    assert "Token missing required scope" in error_response["error"]["message"]
