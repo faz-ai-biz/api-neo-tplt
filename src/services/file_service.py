@@ -1,76 +1,88 @@
 import os
 from pathlib import Path
+from typing import Any, Dict, List
 from urllib.parse import unquote
 
 from src.core.exceptions import FileNotFoundError
 
 
 class FileService:
-    def get_metadata(self, file_path: str) -> dict:
-        """Get metadata for a file"""
-        decoded_path = unquote(file_path)
-        path = Path(decoded_path)
+    def __init__(self, base_path: Path):
+        """Initialize FileService with a base path"""
+        self.base_path = base_path
 
-        if not path.exists():
-            raise FileNotFoundError(f"File not found: {decoded_path}")
-
-        if not os.access(path, os.R_OK):
-            raise PermissionError(f"Cannot read file: {decoded_path}")
-
-        stats = path.stat()
-        return {
-            "name": path.name,
-            "size": stats.st_size,
-            "created": stats.st_ctime,
-            "modified": stats.st_mtime,
-            "is_file": path.is_file(),
-            "is_dir": path.is_dir(),
-        }
-
-    def read_file_content(self, file_path: str) -> str:
-        """Read content from a text file"""
-        decoded_path = unquote(file_path)
-        path = Path(decoded_path)
-
-        if not path.exists():
-            raise FileNotFoundError(f"File not found: {decoded_path}")
-
-        if not os.access(path, os.R_OK):
-            raise PermissionError(f"Cannot read file: {decoded_path}")
-
+    def _resolve_path(self, path: str) -> Path:
+        """Resolve and validate a path"""
         try:
-            return path.read_text()
-        except UnicodeDecodeError:
-            raise UnicodeDecodeError(
-                "utf-8", b"", 0, 1, "File is not a valid text file"
-            )
+            # Decode URL-encoded path
+            decoded_path = unquote(path)
 
-    def list_directory(self, dir_path: str) -> list[dict]:
+            # Resolve the full path
+            requested_path = (self.base_path / decoded_path).resolve()
+
+            # Check if the resolved path is within base directory
+            if not str(requested_path).startswith(str(self.base_path)):
+                raise ValueError("Path traversal attempt detected")
+
+            return requested_path
+        except Exception as e:
+            raise ValueError(f"Invalid path: {str(e)}")
+
+    def read_file_content(self, path: str) -> str:
+        """Read content from a text file"""
+        try:
+            full_path = self._resolve_path(path)
+
+            if not full_path.exists():
+                raise FileNotFoundError(f"File not found: {path}")
+
+            if not full_path.is_file():
+                raise ValueError(f"Not a file: {path}")
+
+            if not os.access(full_path, os.R_OK):
+                raise PermissionError(f"Cannot read file: {path}")
+
+            return full_path.read_text()
+        except ValueError as e:
+            raise ValueError(str(e))
+
+    def list_directory(self, path: str = "") -> List[Dict[str, Any]]:
         """List contents of a directory"""
-        decoded_path = unquote(dir_path)
-        path = Path(decoded_path)
+        try:
+            full_path = self._resolve_path(path)
 
-        if not path.exists():
-            raise FileNotFoundError(f"Directory not found: {decoded_path}")
+            if not full_path.exists():
+                raise FileNotFoundError(f"Directory not found: {path}")
 
-        if not path.is_dir():
-            raise NotADirectoryError(f"Path is not a directory: {decoded_path}")
+            if not full_path.is_dir():
+                raise ValueError(f"Not a directory: {path}")
 
-        if not os.access(path, os.R_OK):
-            raise PermissionError(f"Cannot read directory: {decoded_path}")
+            contents = []
+            for item in full_path.iterdir():
+                contents.append(
+                    self.get_metadata(str(item.relative_to(self.base_path)))
+                )
+            return contents
+        except ValueError as e:
+            raise ValueError(str(e))
 
-        contents = []
-        for item in path.iterdir():
-            stats = item.stat()
-            contents.append(
-                {
-                    "name": item.name,
-                    "size": stats.st_size,
-                    "created": stats.st_ctime,
-                    "modified": stats.st_mtime,
-                    "is_dir": item.is_dir(),
-                    "is_file": item.is_file(),
-                }
-            )
+    def get_metadata(self, path: str) -> Dict[str, Any]:
+        """Get metadata for a file or directory"""
+        try:
+            full_path = self._resolve_path(path)
 
-        return contents
+            if not full_path.exists():
+                raise FileNotFoundError(f"Path not found: {path}")
+
+            stats = full_path.stat()
+            return {
+                "name": full_path.name,
+                "path": str(full_path.relative_to(self.base_path)),
+                "size": stats.st_size,
+                "created": stats.st_ctime,
+                "modified": stats.st_mtime,
+                "is_file": full_path.is_file(),
+                "is_dir": full_path.is_dir(),
+            }
+        except ValueError as e:
+            raise ValueError(str(e))
