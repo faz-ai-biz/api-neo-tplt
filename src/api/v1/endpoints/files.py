@@ -53,15 +53,26 @@ async def get_file_content(
 async def list_directory(
     path: str = "",
     base_path: str = Query(..., description="Base path for file operations"),
+    limit: int = Query(
+        50, ge=1, le=200, description="Maximum number of items per page"
+    ),
+    cursor: str = Query(None, description="Pagination cursor"),
     token_data=Depends(verify_token),
 ):
-    """List files in a directory"""
+    """
+    List files in a directory with pagination support
+
+    - limit: Number of items per page (1-200, default 50)
+    - cursor: Opaque cursor for getting next page
+    """
     try:
         file_service = FileService(base_path=Path(base_path))
-        files = file_service.list_directory(path)
-        return {"contents": files}
+        result = file_service.list_directory(path=path, limit=limit, cursor=cursor)
+        return result
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 class BatchRequest(BaseModel):
