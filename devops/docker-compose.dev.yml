@@ -6,7 +6,9 @@ networks:
 
 services:
   redis:
-    container_name: ${COMPOSE_PROJECT_NAME:-api}-redis-dev
+    env_file:
+      - .env.dev  
+    container_name: ${COMPOSE_PROJECT_NAME:-api}-redis-${ENVIRONMENT}
     image: redis:alpine
     ports:
       - "6379:6379"
@@ -14,14 +16,21 @@ services:
       - redis_data:/data
     networks:
       - backend
+    command: redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
 
   web:
-    container_name: ${COMPOSE_PROJECT_NAME:-api}-web-dev
+    env_file:
+      - .env.dev  
+    container_name: ${COMPOSE_PROJECT_NAME:-api}-web-${ENVIRONMENT}
     build:
       context: ..
-      dockerfile: devops/Dockerfile
-    env_file:
-      - .env.dev
+      dockerfile: devops/Dockerfile.${ENVIRONMENT}
     ports:
       - "8000:8000"
     depends_on:
@@ -40,7 +49,7 @@ services:
   db:
     env_file:
       - .env.dev 
-    container_name: ${COMPOSE_PROJECT_NAME:-api}-db-dev
+    container_name: ${COMPOSE_PROJECT_NAME:-api}-db-${ENVIRONMENT}
     image: postgres:16
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
