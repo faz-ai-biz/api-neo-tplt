@@ -4,8 +4,9 @@ FROM python:3.11-slim-bookworm as builder
 WORKDIR /build
 
 # Install build dependencies
-COPY devops/req-base.dev requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY devops/req-base.prod req-base.prod
+COPY devops/req-base.dev req-base.dev
+RUN pip install --no-cache-dir -r req-base.dev
 
 # Runtime stage
 FROM python:3.11-slim-bookworm
