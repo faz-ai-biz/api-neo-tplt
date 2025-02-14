@@ -1,0 +1,361 @@
+{
+  "info": {
+    "_postman_id": "1234-5678-abcd-efgh",
+    "name": "File Explorer API v1.0",
+    "description": "Collection for testing the File Explorer API endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Valid JWT Access",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/files?path=/test/sample.txt",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "files"],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "/test/sample.txt"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Invalid JWT Token",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid.token.here",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/files?path=/test/sample.txt",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "files"],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "/test/sample.txt"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "File Operations",
+      "item": [
+        {
+          "name": "Get File Metadata",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/files?path=/test/sample.txt",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "files"],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "/test/sample.txt"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Text File Content",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "text/plain",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/files/content?path=/test/sample.txt",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "files", "content"],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "/test/sample.txt"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download Binary File",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/files/download?path=/test/image.png",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "files", "download"],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "/test/image.png"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Directory",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/files/list?path=/test&base_path=/home/user",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "files", "list"],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "/test"
+                },
+                {
+                  "key": "base_path",
+                  "value": "/home/user"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Batch Operations",
+      "item": [
+        {
+          "name": "Get Multiple Files Metadata",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paths\": [\n    \"/test/file1.txt\",\n    \"/test/file2.txt\",\n    \"/test/image.png\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/files/batch",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "files", "batch"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Directory Operations",
+      "item": [
+        {
+          "name": "List Directory Contents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/directories?path=/test&showHidden=false&limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "directories"],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "/test"
+                },
+                {
+                  "key": "showHidden",
+                  "value": "false"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Directory Tree",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/directories/tree?path=/test&maxDepth=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "directories", "tree"],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "/test"
+                },
+                {
+                  "key": "maxDepth",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Search Operations",
+      "item": [
+        {
+          "name": "Search Files",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/search?query=example&searchIn=name&caseSensitive=false",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "example"
+                },
+                {
+                  "key": "searchIn",
+                  "value": "name"
+                },
+                {
+                  "key": "caseSensitive",
+                  "value": "false"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "System Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/system/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "system", "health"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [""]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test(\"Status code is 200\", function () {",
+          "    pm.response.to.have.status(200);",
+          "});",
+          "",
+          "pm.test(\"Response time is less than 500ms\", function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(500);",
+          "});"
+        ]
+      }
+    }
+  ]
+} 
