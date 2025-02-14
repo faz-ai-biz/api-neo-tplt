@@ -1,6 +1,8 @@
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
-from pathlib import Path
+
 
 def test_get_nonexistent_file_metadata(client, auth_headers):
     """

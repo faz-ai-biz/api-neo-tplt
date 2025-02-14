@@ -1,9 +1,10 @@
+from datetime import datetime, timedelta
+
+import jwt
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import jwt
-from datetime import datetime, timedelta
 
 from src.core.config import settings
 from src.db.models import Base
@@ -69,7 +70,7 @@ def cleanup_test_data():
     # Cleanup procedures as specified in test plan
     import shutil
     import os
-    
+
     # 1. Remove test files
     test_files_dir = "/tmp/test_files"
     if os.path.exists(test_files_dir):

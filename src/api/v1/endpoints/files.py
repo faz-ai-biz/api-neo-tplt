@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, status, HTTPException
-from datetime import datetime
 import os
-from pathlib import Path
 import uuid
+from datetime import datetime
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.api.dependencies.auth import verify_token
-from src.services.file_service import FileService
 from src.core.exceptions import FileNotFoundError
+from src.services.file_service import FileService
 
 # Create router instance
 router = APIRouter(prefix="/files", tags=["files"])

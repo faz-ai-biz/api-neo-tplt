@@ -1,10 +1,11 @@
 from typing import Dict
+
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
 from src.core.config import settings
 from src.core.exceptions import InvalidTokenError
-import jwt
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=True)
 

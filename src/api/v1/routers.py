@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
+from .endpoints import files
 from .endpoints.hello import router as hello_router
 from .endpoints.metrics import router as metrics_router
 from .endpoints.users import router as users_router
-from .endpoints import files
 
 api_router = APIRouter(prefix="/api/v1")
 
