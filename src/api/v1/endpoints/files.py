@@ -2,6 +2,11 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import (  # Added Response import for file content
+    JSONResponse,
+    Response,
+)
+from pydantic import BaseModel  # Import for BatchRequest model
 
 from src.api.dependencies.auth import verify_token  # Fix import path
 from src.core.exceptions import FileNotFoundError
@@ -31,24 +36,17 @@ async def get_file_metadata(
 
 @router.get("/content")
 async def get_file_content(
-    path: str, token_data=Depends(verify_token), file_service: FileService = Depends()
+    path: str,
+    base_path: str = Query(..., description="Base path for file operations"),
+    token_data=Depends(verify_token),
 ):
     """Get content of a text file"""
     try:
-        content = file_service.read_file_content(path)
+        file_service = FileService(base_path=Path(base_path))
+        content = file_service.get_content(path)
         return {"content": content}
     except FileNotFoundError as e:
-        raise e
-    except PermissionError:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to access file",
-        )
-    except UnicodeDecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File is not a valid text file",
-        )
+        raise HTTPException(status_code=404, detail=str(e))
 
 
 @router.get("/list")
@@ -57,24 +55,33 @@ async def list_directory(
     base_path: str = Query(..., description="Base path for file operations"),
     token_data=Depends(verify_token),
 ):
-    """List contents of a directory"""
+    """List files in a directory"""
     try:
-        print(
-            f"DEBUG: Listing directory with path: {path}, base_path: {base_path}"
-        )  # Debug log
         file_service = FileService(base_path=Path(base_path))
-        contents = file_service.list_directory(path)
-        print(f"DEBUG: Directory contents: {contents}")  # Debug log
-        return {"contents": contents}
+        files = file_service.list_directory(path)
+        return {"contents": files}
     except FileNotFoundError as e:
-        print(f"ERROR: Directory not found: {str(e)}")  # Debug log
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except PermissionError:
-        print(f"ERROR: Permission denied for path: {path}")  # Debug log
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to access directory",
-        )
-    except ValueError as e:
-        print(f"ERROR: Invalid directory request: {str(e)}")  # Debug log
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+class BatchRequest(BaseModel):
+    paths: list[str]
+
+
+@router.post("/batch")
+async def batch_get_files(
+    payload: BatchRequest,
+    base_path: str = Query(..., description="Base path for file operations"),
+    token_data=Depends(verify_token),
+):
+    """Return metadata for multiple files"""
+    file_service = FileService(base_path=Path(base_path))
+    results = []
+    for file_path in payload.paths:
+        try:
+            meta = file_service.get_metadata(file_path)
+            results.append(meta)
+        except FileNotFoundError as e:
+            # Append error details per file if not found (alternatively, you could skip or halt)
+            results.append({"path": file_path, "error": str(e)})
+    return results
