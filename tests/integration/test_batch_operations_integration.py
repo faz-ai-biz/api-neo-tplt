@@ -52,37 +52,35 @@ def test_batch_multiple_valid_files(client, auth_headers, tmp_path):
         assert "size" in item, "Metadata must include 'size'"
         assert "last_modified" in item, "Metadata must include 'last_modified'"
 
+
 def test_batch_empty_paths(client, auth_headers, tmp_path):
     """
     BATCH-004: Validate behavior when an empty paths array is provided
-    
+
     Expected:
     - Response status code is 200 OK
     - Response body is an empty array
     - Response is properly formatted JSON
     """
     # Create payload with empty paths array
-    payload = {
-        "paths": []
-    }
-    
+    payload = {"paths": []}
+
     # Set up headers with auth token
-    headers = {
-        **auth_headers,
-        "Content-Type": "application/json"
-    }
-    
+    headers = {**auth_headers, "Content-Type": "application/json"}
+
     # Make request to batch endpoint
     response = client.post(
         "/api/v1/files/batch",
         json=payload,
         headers=headers,
-        params={"base_path": str(tmp_path)}
+        params={"base_path": str(tmp_path)},
     )
-    
+
     # Verify response status code
-    assert response.status_code == 200, f"Expected status code 200, got {response.status_code}"
-    
+    assert (
+        response.status_code == 200
+    ), f"Expected status code 200, got {response.status_code}"
+
     # Verify response body is an empty array
     data = response.json()
     assert isinstance(data, list), "Expected response to be a list"
