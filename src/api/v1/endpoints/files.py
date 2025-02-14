@@ -49,3 +49,24 @@ async def get_file_content(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File is not a valid text file",
         )
+
+
+@router.get("/list")
+async def list_directory(
+    path: str, token_data=Depends(verify_token), file_service: FileService = Depends()
+):
+    """List contents of a directory"""
+    try:
+        contents = file_service.list_directory(path)
+        return {"contents": contents}
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient permissions to access directory",
+        )
+    except NotADirectoryError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Path is not a directory"
+        )

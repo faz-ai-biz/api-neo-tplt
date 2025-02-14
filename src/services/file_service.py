@@ -44,3 +44,33 @@ class FileService:
             raise UnicodeDecodeError(
                 "utf-8", b"", 0, 1, "File is not a valid text file"
             )
+
+    def list_directory(self, dir_path: str) -> list[dict]:
+        """List contents of a directory"""
+        decoded_path = unquote(dir_path)
+        path = Path(decoded_path)
+
+        if not path.exists():
+            raise FileNotFoundError(f"Directory not found: {decoded_path}")
+
+        if not path.is_dir():
+            raise NotADirectoryError(f"Path is not a directory: {decoded_path}")
+
+        if not os.access(path, os.R_OK):
+            raise PermissionError(f"Cannot read directory: {decoded_path}")
+
+        contents = []
+        for item in path.iterdir():
+            stats = item.stat()
+            contents.append(
+                {
+                    "name": item.name,
+                    "size": stats.st_size,
+                    "created": stats.st_ctime,
+                    "modified": stats.st_mtime,
+                    "is_dir": item.is_dir(),
+                    "is_file": item.is_file(),
+                }
+            )
+
+        return contents

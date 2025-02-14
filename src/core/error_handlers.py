@@ -10,6 +10,7 @@ from src.core.exceptions import (
     UserNotFoundError,
 )
 from src.utils.logging import logger
+from src.utils.response import create_error_response
 
 
 async def invalid_token_handler(
@@ -56,11 +57,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
                 message=str(exc.detail),
                 status_code=exc.status_code,
             )
-
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=error_response,  # Return error response directly, not nested under 'detail'
-        )
+        return JSONResponse(content=error_response, status_code=exc.status_code)
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(
