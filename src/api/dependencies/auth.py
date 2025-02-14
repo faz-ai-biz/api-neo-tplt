@@ -13,9 +13,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=True)
 def verify_token(token: str = Depends(oauth2_scheme)) -> Dict:
     """
     Verify JWT token and return payload if valid
-
-    The OAuth2PasswordBearer dependency will automatically raise
-    401 Unauthorized when the Authorization header is missing
     """
     try:
         payload = jwt.decode(
@@ -25,6 +22,15 @@ def verify_token(token: str = Depends(oauth2_scheme)) -> Dict:
             audience=settings.AUTH_TOKEN_AUDIENCE,
             issuer=settings.AUTH_TOKEN_ISSUER,
         )
+
+        # Verify required scope is present
+        scopes = payload.get("scope", [])
+        if "files:read" not in scopes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Token missing required scope",
+            )
+
         return payload
     except jwt.InvalidTokenError as e:
         raise InvalidTokenError(str(e))

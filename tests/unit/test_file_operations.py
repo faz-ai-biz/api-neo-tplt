@@ -13,9 +13,7 @@ def test_special_characters_filename(client, auth_headers, tmp_path):
 
     # Request metadata for file with special characters
     response = client.get(
-        "/api/v1/files",
-        params={"path": str(test_file)},
-        headers=auth_headers
+        "/api/v1/files", params={"path": str(test_file)}, headers=auth_headers
     )
 
     # Verify response status and metadata
@@ -24,4 +22,4 @@ def test_special_characters_filename(client, auth_headers, tmp_path):
     assert "metadata" in data
     assert data["metadata"]["name"] == special_filename
     assert data["metadata"]["path"] == str(test_file)
-    assert data["metadata"]["size"] == len("Test content") 
+    assert data["metadata"]["size"] == len("Test content")

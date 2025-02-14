@@ -23,17 +23,12 @@ def test_db():
 
 
 @pytest.fixture
-def app():
-    return create_app()
-
-
-@pytest.fixture
-def client(app):
+def client(test_db):
     """Create test client with database session"""
 
     def override_get_db():
         try:
-            db = app.state.db
+            db = test_db()
             yield db
         finally:
             db.close()
@@ -100,26 +95,35 @@ def cleanup_test_data():
         pass  # Module not implemented yet
 
 
-@pytest.fixture
-def valid_token():
-    """Create a valid JWT token for testing"""
+def create_test_token(scopes: list[str]) -> str:
+    """Create a JWT token with specified scopes for testing"""
     payload = {
         "sub": "test_user",
-        "exp": datetime.utcnow() + timedelta(minutes=15),
+        "exp": datetime.utcnow() + timedelta(hours=1),
         "iat": datetime.utcnow(),
         "aud": settings.AUTH_TOKEN_AUDIENCE,
         "iss": settings.AUTH_TOKEN_ISSUER,
-        "scope": ["files:read"],
+        "scope": scopes,
     }
 
-    token = jwt.encode(
+    return jwt.encode(
         payload, settings.AUTH_SECRET_KEY, algorithm=settings.AUTH_ALGORITHM
     )
 
-    return token
+
+@pytest.fixture
+def valid_token() -> str:
+    """Create a valid token with default test scopes"""
+    return create_test_token(scopes=["files:read"])
 
 
 @pytest.fixture
-def auth_headers(valid_token):
+def auth_headers(valid_token) -> dict:
     """Create headers with valid authentication token"""
     return {"Authorization": f"Bearer {valid_token}"}
+
+
+@pytest.fixture
+def client() -> TestClient:
+    """Create a test client with the app"""
+    return TestClient(app)
