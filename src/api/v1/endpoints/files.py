@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import (  # Added Response import for file content
@@ -9,7 +10,13 @@ from fastapi.responses import (  # Added Response import for file content
 from pydantic import BaseModel  # Import for BatchRequest model
 
 from src.api.dependencies.auth import verify_token  # Fix import path
+from src.api.v1.models.responses import (
+    ErrorResponse,
+    FileMetadataResponse,
+    PaginatedDirectoryResponse,
+)
 from src.core.exceptions import FileNotFoundError
+from src.infrastructure.storage.filesystem import FilesystemStorage
 from src.services.file_service import FileService
 
 router = APIRouter(
@@ -17,20 +24,26 @@ router = APIRouter(
 )  # Make sure router is defined at module level
 
 
-@router.get("")
+class BatchRequest(BaseModel):
+    paths: list[str]
+
+
+@router.get("", response_model=FileMetadataResponse)
 async def get_file_metadata(
-    path: str, token_data=Depends(verify_token), file_service: FileService = Depends()
+    path: str,
+    base_path: str = Query(..., description="Base path for file operations"),
+    token_data=Depends(verify_token),
 ):
     """Get metadata for a file"""
     try:
-        metadata = file_service.get_metadata(path)
-        return {"metadata": metadata}
+        storage = FilesystemStorage(Path(base_path))
+        file_service = FileService(storage)
+        return file_service.get_metadata(path)
     except FileNotFoundError as e:
-        raise e
+        raise HTTPException(status_code=404, detail={"error": {"message": str(e)}})
     except PermissionError:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Insufficient permissions to access file",
+            status_code=403, detail={"error": {"message": "Permission denied"}}
         )
 
 
@@ -42,57 +55,59 @@ async def get_file_content(
 ):
     """Get content of a text file"""
     try:
-        file_service = FileService(base_path=Path(base_path))
-        content = file_service.get_content(path)
-        return {"content": content}
+        storage = FilesystemStorage(Path(base_path))
+        file_service = FileService(storage)
+        content = file_service.storage.read_content(path)
+        return JSONResponse(content={"content": content})
     except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail={"error": {"message": str(e)}}
+        )
+    except UnicodeDecodeError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": {"message": "File is not a valid text file"}},
+        )
 
 
-@router.get("/list")
+@router.get("/list", response_model=PaginatedDirectoryResponse)
 async def list_directory(
     path: str = "",
     base_path: str = Query(..., description="Base path for file operations"),
-    limit: int = Query(
-        50, ge=1, le=200, description="Maximum number of items per page"
-    ),
-    cursor: str = Query(None, description="Pagination cursor"),
+    limit: int = Query(50, ge=1, le=200),
+    cursor: Optional[str] = None,
     token_data=Depends(verify_token),
 ):
-    """
-    List files in a directory with pagination support
-
-    - limit: Number of items per page (1-200, default 50)
-    - cursor: Opaque cursor for getting next page
-    """
+    """List contents of a directory with pagination"""
     try:
-        file_service = FileService(base_path=Path(base_path))
-        result = file_service.list_directory(path=path, limit=limit, cursor=cursor)
-        return result
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        storage = FilesystemStorage(Path(base_path))
+        file_service = FileService(storage)
+        return file_service.list_directory(path, limit=limit, cursor=cursor)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": {"message": str(e)}},
+        )
+    except FileNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail={"error": {"message": str(e)}}
+        )
 
 
-class BatchRequest(BaseModel):
-    paths: list[str]
-
-
-@router.post("/batch")
+@router.post("/batch", response_model=list[FileMetadataResponse])
 async def batch_get_files(
     payload: BatchRequest,
     base_path: str = Query(..., description="Base path for file operations"),
     token_data=Depends(verify_token),
 ):
     """Return metadata for multiple files"""
-    file_service = FileService(base_path=Path(base_path))
+    storage = FilesystemStorage(Path(base_path))
+    file_service = FileService(storage)
     results = []
     for file_path in payload.paths:
         try:
             meta = file_service.get_metadata(file_path)
             results.append(meta)
         except FileNotFoundError as e:
-            # Append error details per file if not found (alternatively, you could skip or halt)
             results.append({"path": file_path, "error": str(e)})
     return results

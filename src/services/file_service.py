@@ -1,132 +1,74 @@
 import os
+from base64 import b64decode, b64encode
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from urllib.parse import unquote
 
+from src.api.v1.models.responses import (
+    FileMetadataResponse,
+    PaginatedDirectoryResponse,
+    PaginationInfo,
+)
 from src.core.exceptions import FileNotFoundError
+from src.core.interfaces.storage import StorageBackend
+from src.infrastructure.storage.filesystem import FilesystemStorage
 
 
 class FileService:
-    def __init__(self, base_path: Path = None):
-        if base_path is None:
-            base_path = Path.cwd()  # Default to the current working directory
-        self.base_path = base_path
+    def __init__(self, storage: FilesystemStorage):
+        self.storage = storage
 
     # Helper method to resolve a relative path using the base_path
     def _resolve_path(self, path: str) -> Path:
         return self.base_path / path if path else self.base_path
 
-    def get_metadata(self, file_path: str) -> dict:
-        """Get metadata for a file"""
-        decoded_path = unquote(file_path)
-        full_path = self.base_path / decoded_path
-
-        if not full_path.exists():
-            raise FileNotFoundError(f"File not found: {decoded_path}")
-
-        if not os.access(full_path, os.R_OK):
-            raise PermissionError(f"Cannot read file: {decoded_path}")
-
-        stats = full_path.stat()
-        return {
-            "path": str(full_path),
-            "size": stats.st_size,
-            "created": stats.st_ctime,
-            "last_modified": stats.st_mtime,
-            "is_file": full_path.is_file(),
-            "is_dir": full_path.is_dir(),
-        }
+    def get_metadata(self, path: str) -> Dict[str, Any]:
+        """Get metadata for a file or directory"""
+        return self.storage.get_metadata(path)
 
     def get_content(self, path: str) -> str:
-        full_path = self.base_path / path
+        full_path = self._resolve_path(path)
         if not full_path.is_file():
             raise FileNotFoundError(f"File {path} not found")
         return full_path.read_text()
 
     def list_directory(
-        self, path: str = "", limit: int = 50, cursor: str = None
+        self, path: str, limit: Optional[int] = None, cursor: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        List contents of a directory with pagination support
+        """List contents of a directory with pagination"""
+        items = self.storage.list_items(path)
 
-        Args:
-            path: Directory path relative to base_path
-            limit: Maximum number of items per page
-            cursor: Opaque cursor for pagination
+        # Handle pagination
+        start_idx = 0
+        if cursor:
+            try:
+                start_idx = int(cursor)
+            except ValueError:
+                raise ValueError("Invalid cursor format")
 
-        Returns:
-            Dict containing:
-            - contents: List of file/directory metadata
-            - pagination: Dict with cursor and has_more flag
+        if limit:
+            end_idx = start_idx + limit
+            has_more = end_idx < len(items)
+            items = items[start_idx:end_idx]
+        else:
+            has_more = False
 
-        Raises:
-            FileNotFoundError: If directory doesn't exist
-            ValueError: For invalid cursor or other errors
-        """
-        try:
-            full_path = self._resolve_path(path)
+        # Get metadata for each item
+        contents = []
+        for item_path in items:
+            try:
+                metadata = self.get_metadata(item_path)
+                contents.append(metadata)
+            except FileNotFoundError:
+                continue
 
-            # Check if directory exists before attempting to list
-            if not full_path.exists():
-                raise FileNotFoundError(f"Directory not found: {path}")
-
-            if not full_path.is_dir():
-                raise FileNotFoundError(f"Path is not a directory: {path}")
-
-            # Get all items and sort them by name for consistent pagination
-            all_items = sorted(full_path.iterdir(), key=lambda x: x.name)
-
-            # Handle cursor-based pagination
-            if cursor:
-                try:
-                    # Cursor format: base64(filename)
-                    from base64 import b64decode
-
-                    cursor_name = b64decode(cursor.encode()).decode()
-                    # Find the item after the cursor
-                    start_idx = next(
-                        (
-                            i
-                            for i, item in enumerate(all_items)
-                            if item.name > cursor_name
-                        ),
-                        len(all_items),
-                    )
-                    all_items = all_items[start_idx:]
-                except Exception:
-                    raise ValueError("Invalid cursor format")
-
-            # Get items for current page
-            page_items = all_items[:limit]
-            has_more = len(all_items) > limit
-
-            # Generate next cursor if there are more items
-            next_cursor = None
-            if has_more and page_items:
-                from base64 import b64encode
-
-                last_name = page_items[-1].name
-                next_cursor = b64encode(last_name.encode()).decode()
-
-            # Get metadata for page items
-            contents = [
-                self.get_metadata(str(item.relative_to(self.base_path)))
-                for item in page_items
-            ]
-
-            return {
-                "contents": contents,
-                "pagination": {"cursor": next_cursor, "has_more": has_more},
-            }
-        except FileNotFoundError:
-            # Re-raise FileNotFoundError to be handled by the endpoint
-            raise
-        except ValueError:
-            # Re-raise ValueError for invalid cursor
-            raise
-        except Exception as e:
-            # Convert other exceptions to ValueError
-            raise ValueError(str(e))
+        return {
+            "contents": contents,
+            "pagination": {
+                "cursor": str(start_idx + len(contents)) if has_more else None,
+                "has_more": has_more,
+            },
+        }
 
     def read_file_content(self, file_path: str) -> str:
         """Read content from a text file"""
