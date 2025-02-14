@@ -3,6 +3,7 @@ pytest
 pytest-cov
 pytest-mock
 pytest-asyncio
+pytest-watch
 httpx
 flake8
 black

@@ -1,4 +1,27 @@
 services:
+
+  test-hot:
+    env_file:
+      - .env.test  
+    container_name: ${COMPOSE_PROJECT_NAME:-api}_web_hot_${ENVIRONMENT:-test}
+    restart: "no"
+    build:
+      context: ..
+      dockerfile: devops/Dockerfile.test
+    depends_on:
+      - db
+    environment:
+      ENVIRONMENT: test
+      PYTHONPATH: /app
+    volumes:
+      - ../src:/app/src
+      - ../tests:/app/tests
+      - ../devops:/app/devops
+      - ../docs:/app/docs
+      - ../pyproject.toml:/app/pyproject.toml
+      - ../poetry.lock:/app/poetry.lock
+    entrypoint: ["/app/devops/scripts/test-hot.sh"]
+
   test:
     env_file:
       - .env.test  
@@ -12,7 +35,6 @@ services:
     environment:
       ENVIRONMENT: test
       PYTHONPATH: /app
-    entrypoint: ["/app/devops/scripts/test.sh"]
 
   db:
     env_file:
