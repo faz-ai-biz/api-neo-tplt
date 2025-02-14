@@ -30,25 +30,28 @@ def test_insufficient_scope(client, tmp_path):
     assert "Token missing required scope" in error_response["error"]["message"]
 
 
-def test_malformed_token(client, tmp_path):
+def test_tampered_signature(client, tmp_path):
     """
-    Test ID: AUTH-004
+    Test ID: AUTH-008
     Category: Authentication
-    Description: Malformed JWT token
+    Description: Tampered JWT signature
     Expected Result: 401 Unauthorized with AUTH002 code
-    Type: Integration
+    Type: Security
     """
     # Create a test file
     test_file = tmp_path / "test.txt"
     test_file.write_text("Test content")
 
-    # Create malformed token (base64-encoded but invalid JWT format)
-    malformed_token = (
-        "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0X3VzZXIifQ"  # Missing signature part
-    )
-    headers = {"Authorization": f"Bearer {malformed_token}"}
+    # Create valid token first
+    token = create_test_token(scopes=["files:read"])
 
-    # Request file metadata with malformed token
+    # Tamper with the signature (last part after the last dot)
+    parts = token.rsplit(".", 1)
+    tampered_token = parts[0] + ".tampered_signature"
+
+    headers = {"Authorization": f"Bearer {tampered_token}"}
+
+    # Request file metadata with tampered token
     response = client.get(
         "/api/v1/files", params={"path": str(test_file)}, headers=headers
     )
@@ -59,10 +62,10 @@ def test_malformed_token(client, tmp_path):
     assert "error" in error_response
     assert error_response["error"]["code"] == "AUTH002"
     assert any(
-        msg in error_response["error"]["message"]
+        msg in error_response["error"]["message"].lower()
         for msg in [
-            "Invalid token",
-            "Not enough segments",  # PyJWT specific error
-            "Malformed token",
+            "invalid signature",
+            "signature verification failed",
+            "invalid token",
         ]
     )
