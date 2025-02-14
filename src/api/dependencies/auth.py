@@ -9,10 +9,11 @@ from src.core.exceptions import InvalidTokenError
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=True)
 
+
 def verify_token(token: str = Depends(oauth2_scheme)) -> Dict:
     """
     Verify JWT token and return payload if valid
-    
+
     The OAuth2PasswordBearer dependency will automatically raise
     401 Unauthorized when the Authorization header is missing
     """
@@ -22,8 +23,8 @@ def verify_token(token: str = Depends(oauth2_scheme)) -> Dict:
             settings.AUTH_SECRET_KEY,
             algorithms=[settings.AUTH_ALGORITHM],
             audience=settings.AUTH_TOKEN_AUDIENCE,
-            issuer=settings.AUTH_TOKEN_ISSUER
+            issuer=settings.AUTH_TOKEN_ISSUER,
         )
         return payload
     except jwt.InvalidTokenError as e:
-        raise InvalidTokenError(str(e)) 
+        raise InvalidTokenError(str(e))

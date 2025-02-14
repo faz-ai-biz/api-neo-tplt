@@ -52,13 +52,12 @@ def setup_test_environment(monkeypatch):
     monkeypatch.setattr(settings, "AUTH_SECRET_KEY", "test-secret-key")
     monkeypatch.setattr(settings, "AUTH_TOKEN_AUDIENCE", "test-audience")
     monkeypatch.setattr(settings, "AUTH_TOKEN_ISSUER", "test-issuer")
-    
+
     # Filter out Pydantic deprecation warnings
     import warnings
+
     warnings.filterwarnings(
-        "ignore",
-        message="Support for class-based.*",
-        category=DeprecationWarning
+        "ignore", message="Support for class-based.*", category=DeprecationWarning
     )
     yield
 
@@ -75,25 +74,27 @@ def cleanup_test_data():
     test_files_dir = "/tmp/test_files"
     if os.path.exists(test_files_dir):
         shutil.rmtree(test_files_dir)
-    
+
     # 2. Clear test directories
     os.makedirs(test_files_dir, exist_ok=True)
-    
+
     # 3. Remove symlinks (if any)
     test_symlinks_dir = "/tmp/test_symlinks"
     if os.path.exists(test_symlinks_dir):
         shutil.rmtree(test_symlinks_dir)
-    
+
     # 4. Clear JWT test tokens (if using Redis/cache)
     try:
         from src.core.cache import clear_test_tokens
+
         clear_test_tokens()
     except ImportError:
         pass  # Module not implemented yet
-    
+
     # 5. Reset rate limiting counters
     try:
         from src.core.rate_limit import reset_test_counters
+
         reset_test_counters()
     except ImportError:
         pass  # Module not implemented yet
@@ -108,15 +109,13 @@ def valid_token():
         "iat": datetime.utcnow(),
         "aud": settings.AUTH_TOKEN_AUDIENCE,
         "iss": settings.AUTH_TOKEN_ISSUER,
-        "scope": ["files:read"]
+        "scope": ["files:read"],
     }
-    
+
     token = jwt.encode(
-        payload,
-        settings.AUTH_SECRET_KEY,
-        algorithm=settings.AUTH_ALGORITHM
+        payload, settings.AUTH_SECRET_KEY, algorithm=settings.AUTH_ALGORITHM
     )
-    
+
     return token
 
 

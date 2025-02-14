@@ -10,4 +10,3 @@ json_handler.setFormatter(formatter)
 logger = logging.getLogger("app_logger")
 logger.addHandler(json_handler)
 logger.setLevel(logging.INFO)
-

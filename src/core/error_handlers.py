@@ -48,7 +48,7 @@ def create_error_response(code: str, message: str, status_code: int) -> dict:
             "message": message,
             "details": None,
             "requestId": str(uuid.uuid4()),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
     }
 
@@ -60,10 +60,8 @@ async def file_not_found_handler(
     return JSONResponse(
         status_code=status.HTTP_404_NOT_FOUND,
         content=create_error_response(
-            code="FILE001",
-            message=str(exc),
-            status_code=status.HTTP_404_NOT_FOUND
-        )
+            code="FILE001", message=str(exc), status_code=status.HTTP_404_NOT_FOUND
+        ),
     )
 
 
@@ -75,10 +73,8 @@ async def http_exception_handler(
     return JSONResponse(
         status_code=exc.status_code,
         content=create_error_response(
-            code=error_code,
-            message=str(exc.detail),
-            status_code=exc.status_code
-        )
+            code=error_code, message=str(exc.detail), status_code=exc.status_code
+        ),
     )
 
 

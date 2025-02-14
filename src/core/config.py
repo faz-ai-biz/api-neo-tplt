@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     # Project settings
     API_VERSION: str = "0.0.1"
     COMPOSE_PROJECT_NAME: str = "set-project-name"
-    ENVIRONMENT: str = "dev" 
+    ENVIRONMENT: str = "dev"
     PROJECT_NAME: str = "set-project-name"
 
     # API Server Settings
@@ -35,7 +35,7 @@ class Settings(BaseSettings):
 
     # Security Settings
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
-    ALGORITHM: str = "HS256"  
+    ALGORITHM: str = "HS256"
     LOGIN_RATE_LIMIT_REQUESTS: int = 20
     LOGIN_RATE_LIMIT_WINDOW: int = 60
     REFRESH_SECRET_KEY: str = "set-refresh-secret-key"
@@ -74,8 +74,8 @@ class Settings(BaseSettings):
         """Validate and format database name using project name and environment."""
         if not v:
             raise ValueError("POSTGRES_DB must be set")
-        project_name = info.data.get('PROJECT_NAME', 'set-project-name')
-        environment = info.data.get('ENVIRONMENT', 'dev')
+        project_name = info.data.get("PROJECT_NAME", "set-project-name")
+        environment = info.data.get("ENVIRONMENT", "dev")
         return f"{project_name}_{environment}"
 
     @field_validator("DATABASE_URL")
@@ -88,6 +88,7 @@ class Settings(BaseSettings):
 
     class Config:
         """Pydantic settings configuration."""
+
         case_sensitive = True
         env_file = ".env"
         env_file_encoding = "utf-8"

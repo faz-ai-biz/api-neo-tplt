@@ -8,9 +8,9 @@ def test_missing_authorization_header(client):
     """
     # Make request without Authorization header
     response = client.get("/api/v1/files", params={"path": "test.txt"})
-    
+
     assert response.status_code == 401
-    
+
     error_response = response.json()
     assert "error" in error_response
     assert error_response["error"]["code"] == "AUTH001"
