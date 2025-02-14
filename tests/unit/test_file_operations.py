@@ -1,29 +1,27 @@
-from pathlib import Path
-
-import pytest
-from fastapi.testclient import TestClient
-
-
-def test_get_nonexistent_file_metadata(client, auth_headers):
+def test_special_characters_filename(client, auth_headers, tmp_path):
     """
-    Test ID: FILE-004
+    Test ID: FILE-007
     Category: Edge Case
-    Description: Get metadata for non-existent file
-    Expected Result: 404 Not Found, FILE001 code
+    Description: Get metadata for file with special characters in name
+    Expected Result: 200 OK with correct metadata
     Type: Unit
     """
-    # Request metadata for non-existent file
-    nonexistent_path = "/tmp/definitely_does_not_exist.txt"
+    # Create a file with special characters in name
+    special_filename = "test!@#$%^&*()_+-=[]{}|;'.txt"
+    test_file = tmp_path / special_filename
+    test_file.write_text("Test content")
+
+    # Request metadata for file with special characters
     response = client.get(
-        "/api/v1/files", params={"path": nonexistent_path}, headers=auth_headers
+        "/api/v1/files",
+        params={"path": str(test_file)},
+        headers=auth_headers
     )
 
-    # Verify response status and error format
-    assert response.status_code == 404
-
-    error_response = response.json()
-    assert "error" in error_response
-    assert error_response["error"]["code"] == "FILE001"
-    assert "File not found" in error_response["error"]["message"]
-    assert "timestamp" in error_response["error"]
-    assert "requestId" in error_response["error"]
+    # Verify response status and metadata
+    assert response.status_code == 200
+    data = response.json()
+    assert "metadata" in data
+    assert data["metadata"]["name"] == special_filename
+    assert data["metadata"]["path"] == str(test_file)
+    assert data["metadata"]["size"] == len("Test content") 
