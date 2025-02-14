@@ -37,5 +37,7 @@ def verify_token(token: str = Depends(oauth2_scheme)) -> Dict:
             )
 
         return payload
+    except jwt.ExpiredSignatureError:
+        raise InvalidTokenError("Token has expired")
     except jwt.InvalidTokenError as e:
         raise InvalidTokenError(str(e))

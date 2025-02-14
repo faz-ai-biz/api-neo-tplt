@@ -16,8 +16,12 @@ from src.utils.response import create_error_response
 async def invalid_token_handler(
     request: Request, exc: InvalidTokenError
 ) -> JSONResponse:
+    """Handle invalid token errors"""
+    error_response = create_error_response(
+        code="AUTH002", message=str(exc), status_code=status.HTTP_401_UNAUTHORIZED
+    )
     return JSONResponse(
-        status_code=status.HTTP_401_UNAUTHORIZED, content={"detail": str(exc)}
+        status_code=status.HTTP_401_UNAUTHORIZED, content=error_response
     )
 
 
@@ -49,7 +53,6 @@ def setup_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         """Handle HTTP exceptions"""
         if isinstance(exc.detail, dict) and "error" in exc.detail:
-            # Extract error response from detail
             error_response = exc.detail
         else:
             error_response = create_error_response(
@@ -57,7 +60,7 @@ def setup_exception_handlers(app: FastAPI) -> None:
                 message=str(exc.detail),
                 status_code=exc.status_code,
             )
-        return JSONResponse(content=error_response, status_code=exc.status_code)
+        return JSONResponse(status_code=exc.status_code, content=error_response)
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(
