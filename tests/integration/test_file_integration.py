@@ -226,3 +226,45 @@ def test_directory_pagination(client, auth_headers, tmp_path):
     assert response.status_code == 422  # FastAPI returns 422 for validation errors
     error_detail = response.json()
     assert "detail" in error_detail  # Verify error details are included
+
+
+def test_list_nonexistent_directory(client, auth_headers, tmp_path):
+    """
+    DIR-005: Validate behavior when attempting to list a non-existent directory
+
+    Expected:
+    - Response status code is 404 Not Found
+    - Response includes appropriate error message
+    - Error details indicate directory not found
+    """
+    # Attempt to list a directory that doesn't exist
+    non_existent_path = "does_not_exist"
+    response = client.get(
+        "/api/v1/files/list",
+        params={"path": non_existent_path, "base_path": str(tmp_path)},
+        headers=auth_headers,
+    )
+
+    # Verify response
+    assert response.status_code == 404
+    error_data = response.json()
+    assert "error" in error_data
+    assert "message" in error_data["error"]
+    assert "not found" in error_data["error"]["message"].lower()
+    assert non_existent_path in error_data["error"]["message"]
+
+    # Test with nested non-existent path
+    nested_path = "parent/child/does_not_exist"
+    response = client.get(
+        "/api/v1/files/list",
+        params={"path": nested_path, "base_path": str(tmp_path)},
+        headers=auth_headers,
+    )
+
+    # Verify nested path response
+    assert response.status_code == 404
+    error_data = response.json()
+    assert "error" in error_data
+    assert "message" in error_data["error"]
+    assert "not found" in error_data["error"]["message"].lower()
+    assert nested_path in error_data["error"]["message"]

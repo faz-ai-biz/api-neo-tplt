@@ -58,15 +58,20 @@ class FileService:
             Dict containing:
             - contents: List of file/directory metadata
             - pagination: Dict with cursor and has_more flag
+
+        Raises:
+            FileNotFoundError: If directory doesn't exist
+            ValueError: For invalid cursor or other errors
         """
         try:
             full_path = self._resolve_path(path)
 
+            # Check if directory exists before attempting to list
             if not full_path.exists():
                 raise FileNotFoundError(f"Directory not found: {path}")
 
             if not full_path.is_dir():
-                raise ValueError(f"Not a directory: {path}")
+                raise FileNotFoundError(f"Path is not a directory: {path}")
 
             # Get all items and sort them by name for consistent pagination
             all_items = sorted(full_path.iterdir(), key=lambda x: x.name)
@@ -113,7 +118,14 @@ class FileService:
                 "contents": contents,
                 "pagination": {"cursor": next_cursor, "has_more": has_more},
             }
+        except FileNotFoundError:
+            # Re-raise FileNotFoundError to be handled by the endpoint
+            raise
+        except ValueError:
+            # Re-raise ValueError for invalid cursor
+            raise
         except Exception as e:
+            # Convert other exceptions to ValueError
             raise ValueError(str(e))
 
     def read_file_content(self, file_path: str) -> str:
